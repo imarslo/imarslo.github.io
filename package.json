@@ -13,6 +13,7 @@
     "version": "5.2.0"
   },
   "dependencies": {
+    "color-themes-for-google-code-prettify": "^2.0.4",
     "hexo": "^5.2.0",
     "hexo-deployer-git": "^2.1.0",
     "hexo-generator-archive": "^1.0.0",
@@ -28,6 +29,7 @@
     "hexo-renderer-sass": "^0.4.0",
     "hexo-renderer-stylus": "^2.0.0",
     "hexo-server": "^2.0.0",
-    "hexo-toc": "^1.1.0"
+    "hexo-toc": "^1.1.0",
+    "valine": "^1.4.14"
   }
 }

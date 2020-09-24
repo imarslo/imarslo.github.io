@@ -112,13 +112,3 @@ search:
   path: search.xml
   field: post
   content: true
-
-# toc:
-  # maxdepth: 3
-  # class: toc
-  # slugify: transliteration
-  # decodeEntities: false
-  # anchor:
-    # position: after
-    # symbol: '#'
-    # style: header-anchor
