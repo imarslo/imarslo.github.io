@@ -106,3 +106,8 @@ deploy:
   type: git
   repo: git@github.com:imarslo/imarslo.github.io.git
   branch: master
+
+search:
+  path: search.xml
+  field: post
+  content: true
