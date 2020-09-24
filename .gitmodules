@@ -1,0 +1,3 @@
+[submodule "themes/snark"]
+	path = themes/snark
+	url = https://github.com/imarslo/hexo-theme-snark.git
