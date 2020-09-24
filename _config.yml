@@ -122,16 +122,3 @@ search:
     # position: after
     # symbol: '#'
     # style: header-anchor
-
-codeblock:
-  # Code Highlight theme
-  # Available values: normal | night | night eighties | night blue | night bright | solarized | solarized dark | galactic
-  # See <img alt=" https" referrerPolicy="no-referrer" class="vemoji" src='//img.t.sinajs.cn/t4/appstyle/expression/ext/normal/: https:'/> //github.com/chriskempson/tomorrow-theme
-  highlight_theme: normal
-  # Add copy button on codeblock
-  copy_button:
-    enable: true
-    # Show text copy result.
-    show_result: true
-    # Available values: default | flat | mac
-    style: mac
