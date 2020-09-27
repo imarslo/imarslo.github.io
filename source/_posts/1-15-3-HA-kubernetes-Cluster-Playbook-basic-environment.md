@@ -13,6 +13,9 @@ excerpt_separator: <!--more-->
 
 <!--more-->
 
+> [!NOTE]
+> notice
+
 > reference:
 > - [Kubernetes HA cluster with external etcd](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/#external-etcd-topology)
 > - [Generate self-signed certificates](https://coreos.com/os/docs/latest/generate-self-signed-certificates.html)
