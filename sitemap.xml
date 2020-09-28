@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <url>
+    <loc>https://imarslo.github.io/about/index.html</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/tags/index.html</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/categories/index.html</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/archives/index.html</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/2020/09/10/1-15-3-HA-kubernetes-Cluster-Playbook-load-balance/</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/2020/09/15/1-15-3-HA-kubernetes-Cluster-Playbook-leading-master/</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/2020/09/20/1-15-3-HA-kubernetes-Cluster-Playbook-following-masters/</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/2020/08/30/1-15-3-HA-kubernetes-Cluster-Playbook-etcd-cluster/</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/2020/08/25/1-15-3-HA-kubernetes-Cluster-Playbook-basic-environment/</loc>
+    
+    <lastmod>2020-09-28</lastmod>
+    
+  </url>
+  
+
+  <url>
+    <loc>https://imarslo.github.io/</loc>
+    <lastmod>2020-09-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  
+  <url>
+    <loc>https://imarslo.github.io/tags/kuberentes/</loc>
+    <lastmod>2020-09-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/tags/centos/</loc>
+    <lastmod>2020-09-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+
+  
+  <url>
+    <loc>https://imarslo.github.io/categories/kubernetes/</loc>
+    <lastmod>2020-09-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://imarslo.github.io/categories/kubernetes/centos/</loc>
+    <lastmod>2020-09-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+</urlset>

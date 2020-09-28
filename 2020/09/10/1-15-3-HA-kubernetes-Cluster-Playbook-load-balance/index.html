@@ -1,0 +1,426 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content=""><meta name="theme-color" content="#2d4356"><meta name="baidu-site-verification"><title>1.15.3 HA kubernetes Cluster Playbook (load balance) | I, Marslo</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.png"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script><script>var _hmt = _hmt || [];
+(function() {
+    var hm = document.createElement("script");
+    hm.src = "https://hm.baidu.com/hm.js?3a8c59bc9d0fddeefeffc98f41c53ed4";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+})();</script><meta name="generator" content="Hexo 5.2.0"><link rel="alternate" href="/atom.xml" title="I, Marslo" type="application/atom+xml">
+</head><link rel="stylesheet" type="text/css" href="/css/customize.css"><link rel="stylesheet" type="text/css" href="/plugins/prettify/doxy.css"><script type="text/javascript" src="/js/ready.js" async></script><link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css"><body class="night"><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/">LITREILY</a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/profile.png" width="128" height="128"></a><h1 class="ttl"><a href="/">I, Marslo</a></h1></div><p class="m-desc">life is hard, make it easier</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">Archive</a></li><li><span class="dot">●</span><a href="/categories/">Category</a></li><li><span class="dot">●</span><a href="/tags/">Tag</a></li><li><span class="dot">●</span><a href="/about/">About</a></li><li><span class="dot">●</span><a target="_blank" rel="noopener" href="https://marslo.github.io/ibook">ibook</a></li><li class="m-sch"><form class="form" id="j-formsch" method="get"><input class="txt" type="text" id="local-search-input" name="q" value="search ..." onfocus="if(this.value=='search ...'){this.value='';}" onblur="if(this.value==''){this.value='search ...';}"><input type="text" style="display:none;"></form></li></ul><div id="local-search-result"></div></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">1.15.3 HA kubernetes Cluster Playbook (load balance)</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2020/09/10/1-15-3-HA-kubernetes-Cluster-Playbook-load-balance/">2020-09-10</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/kubernetes/">kubernetes</a>&nbsp;&bull;&nbsp;<a href="/categories/kubernetes/centos/">centos</a></span><span class="p-view" id="busuanzi_container_page_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_page_pv"></span></span></div></div><div class="p-content"><h2 id="Objective"><a href="#Objective" class="headerlink" title="Objective"></a>Objective</h2><img src="/assets/images/external-etcd-topology-lb.png" style="width: 666px;" />
+
+<a id="more"></a>
+
+<h3 id="variables"><a href="#variables" class="headerlink" title="variables"></a>variables</h3><div class="alert alert-success" role="alert">
+<i class="fa fa-check-square-o"></i>
+<b>Tip: </b>execute the variables in all console (masters) at the very begining, make sure all servers are using the exact same value (and avoid manual input)
+</div>
+
+<pre><code class="bash">## change if necessary
+# hostname
+master01Name=&#39;master01&#39;
+master02Name=&#39;master02&#39;
+master03Name=&#39;master03&#39;
+
+# ipaddress
+master01IP=&#39;192.168.100.200&#39;
+master01IP=&#39;192.168.100.201&#39;
+master01IP=&#39;192.168.100.202&#39;
+virtualIP=&#39;192.168.100.250&#39;
+
+leadIP=&quot;$&#123;master01IP&#125;&quot;
+leadName=&quot;$&#123;master01Name&#125;&quot;
+
+k8sVer=&#39;v1.15.3&#39;
+cfsslDownloadUrl=&#39;https://pkg.cfssl.org/R1.2&#39;
+
+etcdVer=&#39;v3.3.15&#39;
+etcdDownloadUrl=&#39;https://github.com/etcd-io/etcd/releases/download&#39;
+etcdSSLPath=&#39;/etc/etcd/ssl&#39;
+etcdInitialCluster=&quot;$&#123;master01Name&#125;=https://$&#123;master01IP&#125;:2380,$&#123;master02Name&#125;=https://$&#123;master02IP&#125;:2380,$&#123;master03Name&#125;=https://$&#123;master03IP&#125;:2380&quot;
+
+keepaliveVer=&#39;2.0.18&#39;
+haproxyVer=&#39;2.0.6&#39;
+helmVer=&#39;v2.14.3&#39;
+
+interface=$(netstat -nr | grep -E &#39;UG|UGSc&#39; | grep -E &#39;^0.0.0|default&#39; | grep -E &#39;[0-9.]&#123;7,15&#125;&#39; | awk -F&#39; &#39; &#39;&#123;print $NF&#125;&#39;)
+ipAddr=$(ip a s &quot;$&#123;interface&#125;&quot; | sed -rn &#39;s|\W*inet[^6]\W*([0-9\.]&#123;7,15&#125;).*$|\1|p&#39;)
+peerName=$(hostname)</code></pre>
+<br>
+
+<h2 id="keepalived"><a href="#keepalived" class="headerlink" title="keepalived"></a>keepalived</h2><h3 id="configuration"><a href="#configuration" class="headerlink" title="configuration"></a>configuration</h3><div class="alert alert-success" role="alert">
+<i class="fa fa-check-square-o"></i>
+<b>Tip: </b> keepalived configuration need to be setup in all kubernetes masters
+</div>
+
+<ul>
+<li><p>with haproxy</p>
+<pre><code class="bash">$ sudo bash -c &#39;cat &gt; /etc/keepalived/keepalived.conf&#39; &lt;&lt; EOF
+! Configuration File for keepalived
+
+global_defs &#123;
+  router_id LVS_DEVEL
+&#125;
+
+vrrp_script check_haproxy &#123;
+  script &quot;killall -0 haproxy&quot;
+  interval 3
+  weight -2
+  fall 10
+  rise 2
+&#125;
+
+vrrp_instance VI_1 &#123;
+  state MASTER
+  interface $&#123;interface&#125;
+  virtual_router_id 51
+  priority 50
+  advert_int 1
+  authentication &#123;
+    auth_type PASS
+    auth_pass 35f18af7190d51c9f7f78f37300a0cbd
+  &#125;
+
+  virtual_ipaddress &#123;
+    $&#123;virtualIP&#125;
+  &#125;
+
+  track_script &#123;
+    check_haproxy
+  &#125;
+&#125;
+EOF</code></pre>
+</li>
+<li><p>without haproxy</p>
+<ul>
+<li><p><code>keepalived.conf</code></p>
+<pre><code class="bash">$ sudo bash -c &#39;cat &gt; /etc/keepalived/keepalived.conf&#39; &lt;&lt; EOF
+! Configuration File for keepalived
+global_defs &#123;
+  router_id LVS_DEVEL
+&#125;
+
+vrrp_script check_apiserver &#123;
+  script &quot;/etc/keepalived/check_apiserver.sh&quot;
+  interval 3
+  weight -2
+  fall 10
+  rise 2
+&#125;
+
+vrrp_instance VI_1 &#123;
+  state MASTER
+  interface $&#123;interface&#125;
+  virtual_router_id 51
+  priority 50
+  authentication &#123;
+    auth_type PASS
+    auth_pass 4be37dc3b4c90194d1600c483e10ad1d
+  &#125;
+  virtual_ipaddress &#123;
+    $&#123;virtualIP&#125;
+  &#125;
+  track_script &#123;
+    check_apiserver
+  &#125;
+&#125;
+EOF</code></pre>
+</li>
+<li><p><code>check_apiserver.sh</code></p>
+<pre><code class="bash">$ sudo bash -c &#39;cat &gt; /etc/keepalived/check_apiserver.sh&#39; &lt;&lt; EOF
+#!/bin/sh
+errorExit() &#123;
+  echo &quot;*** \$*&quot; 1&gt;&amp;2
+  exit 1
+&#125;
+
+curl --silent                           \
+     --max-time 2                       \
+     --insecure https://localhost:6443/ \
+     -o /dev/null                       \
+     || errorExit &#39;Error GET https://localhost:6443/&#39;
+
+if ip addr | grep -q $&#123;virtualIP&#125;; then
+  curl --silent                                  \
+       --max-time 2                              \
+       --insecure https://$&#123;virtualIP&#125;:6443/     \
+       -o /dev/null                              \
+       || errorExit &quot;Error GET https://$&#123;virtualIP&#125;:6443/&quot;
+fi
+EOF</code></pre>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="enable-keepalived-services-in-all-masters"><a href="#enable-keepalived-services-in-all-masters" class="headerlink" title="enable keepalived services in all masters"></a>enable keepalived services in all masters</h3><ul>
+<li>start keepalived serice and verify<pre><code class="bash">$ sudo systemctl enable keepalived.service
+$ sudo systemctl start keepalived.service</code></pre>
+<br>
+
+</li>
+</ul>
+<div class="alert alert-success" role="alert">
+<i class="fa fa-check-square-o"></i>
+<b>Tip: </b> One of the master will be setup to virutal dual networking card and show 2 ip addresses.
+<br>The one without Broadcast is the virutal IP.
+</div>
+
+<ul>
+<li><p>verify</p>
+<pre><code class="bash">$ sudo systemctl is-enabled keepalived.service
+enabled
+$ sudo systemctl is-active keepalived.service
+active
+
+$ ip -4 a s $&#123;interface&#125;
+2: eno1: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:50:50:85:96:64 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.100.202/24 brd 192.168.100.255 scope global noprefixroute eno1
+       valid_lft forever preferred_lft forever
+    inet 192.168.100.250/32 scope global eno1
+       valid_lft forever preferred_lft forever</code></pre>
+</li>
+</ul>
+<details>
+<summary> click for more details </summary>
+<pre><code>$ for i in &#123;1..3&#125;; do
+  -> echo '---------'
+  -> ssh -q devops@master0$&#123;i&#125; "/usr/sbin/ip -4 a s $(netstat -nr | grep -E 'UG|UGSc' | grep -E '^0.0.0|default' | grep -E '[0-9.]&#123;7,15&#125;' | awk -F' ' '&#123;print $NF&#125;')"
+  -> done
+---------
+2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    inet 192.168.100.200/24 brd 192.168.100.255 scope global noprefixroute eno1
+       valid_lft forever preferred_lft forever
+---------
+2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    inet 192.168.100.201/24 brd 192.168.100.255 scope global noprefixroute eno1
+       valid_lft forever preferred_lft forever
+---------
+2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    inet 192.168.100.202/24 brd 192.168.100.255 scope global noprefixroute eno1
+       valid_lft forever preferred_lft forever
+    inet 192.168.100.250/32 scope global eno1       <<<< virtual ip in master node 03
+       valid_lft forever preferred_lft forever
+</code></pre>
+<br>
+
+<pre><code>$ for i in &#123;1..3&#125;; do
+  -> ssh -q devops@master0$&#123;i&#125; "sudo systemctl status keepalived"
+  -> echo ''
+  -> done
+● keepalived.service - LVS and VRRP High Availability Monitor
+   Loaded: loaded (/etc/systemd/system/keepalived.service; enabled; vendor preset: disabled)
+   Active: active (running) since Tue 2019-09-03 01:13:17 PDT; 18min ago
+  Process: 26437 ExecStart=/usr/local/sbin/keepalived $KEEPALIVED_OPTIONS (code=exited, status=0/SUCCESS)
+ Main PID: 26438 (keepalived)
+    Tasks: 2
+   Memory: 652.0K
+   CGroup: /system.slice/keepalived.service
+           ├─26438 /usr/local/sbin/keepalived -D
+           └─26439 /usr/local/sbin/keepalived -D
+Sep 03 01:15:35 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:36 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:37 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:38 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:39 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:40 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:41 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:42 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:43 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+Sep 03 01:15:43 master01 Keepalived_vrrp[26439]: (VI_1) ip address associated with VRID 51 not present in MASTER advert : 10.69.78.50
+
+● keepalived.service - LVS and VRRP High Availability Monitor
+   Loaded: loaded (/etc/systemd/system/keepalived.service; enabled; vendor preset: disabled)
+   Active: active (running) since Tue 2019-09-03 01:17:24 PDT; 14min ago
+  Process: 32672 ExecStart=/usr/local/sbin/keepalived $KEEPALIVED_OPTIONS (code=exited, status=0/SUCCESS)
+ Main PID: 32673 (keepalived)
+    Tasks: 2
+   Memory: 652.0K
+   CGroup: /system.slice/keepalived.service
+           ├─32673 /usr/local/sbin/keepalived -D
+           └─32674 /usr/local/sbin/keepalived -D
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: (Line 19) Truncating auth_pass to 8 characters
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: WARNING - script '/etc/keepalived/check_apiserver.sh' is not executable for uid:gid 0:0 - disabling.
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: SECURITY VIOLATION - scripts are being executed but script_security not enabled.
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: Assigned address 192.168.100.201 for interface eno1
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: Assigned address fe80::250:56ff:fe88:fd2 for interface eno1
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: Registering gratuitous ARP shared channel
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: (VI_1) removing VIPs.
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: (VI_1) Entering BACKUP STATE (init)
+Sep 03 01:17:24 master02 Keepalived_vrrp[32674]: VRRP sockpool: [ifindex(2), family(IPv4), proto(112), unicast(0), fd(11,12)]
+Sep 03 01:17:24 master02 systemd[1]: Started LVS and VRRP High Availability Monitor.
+
+● keepalived.service - LVS and VRRP High Availability Monitor
+   Loaded: loaded (/etc/systemd/system/keepalived.service; enabled; vendor preset: disabled)
+   Active: active (running) since Tue 2019-09-03 01:17:35 PDT; 14min ago
+  Process: 16830 ExecStart=/usr/local/sbin/keepalived $KEEPALIVED_OPTIONS (code=exited, status=0/SUCCESS)
+ Main PID: 16831 (keepalived)
+    Tasks: 2
+   Memory: 648.0K
+   CGroup: /system.slice/keepalived.service
+           ├─16831 /usr/local/sbin/keepalived -D
+           └─16832 /usr/local/sbin/keepalived -D
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: (Line 19) Truncating auth_pass to 8 characters
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: WARNING - script '/etc/keepalived/check_apiserver.sh' is not executable for uid:gid 0:0 - disabling.
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: SECURITY VIOLATION - scripts are being executed but script_security not enabled.
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: Assigned address 192.168.100.202 for interface eno1
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: Assigned address fe80::250:56ff:fe88:9624 for interface eno1
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: Registering gratuitous ARP shared channel
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: (VI_1) removing VIPs.
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: (VI_1) Entering BACKUP STATE (init)
+Sep 03 01:17:35 master03 Keepalived_vrrp[16832]: VRRP sockpool: [ifindex(2), family(IPv4), proto(112), unicast(0), fd(11,12)]
+Sep 03 01:17:35 master03 systemd[1]: Started LVS and VRRP High Availability Monitor.
+</code></pre>
+</details>
+<br>
+
+
+<h2 id="haproxy"><a href="#haproxy" class="headerlink" title="haproxy"></a>haproxy</h2><h3 id="configuration-1"><a href="#configuration-1" class="headerlink" title="configuration"></a>configuration</h3><ul>
+<li><p>haproxy configure</p>
+<pre><code class="bash">$ sudo bash -c &#39;cat /etc/haproxy/haproxy.cfg&#39; &lt;&lt; EOF
+#---------------------------------------------------------------------
+# Example configuration for a possible web application.  See the
+# full configuration options online.
+#
+#   http://haproxy.1wt.eu/download/2.0/doc/configuration.txt
+#
+#---------------------------------------------------------------------
+
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+    log         127.0.0.1 local2
+
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+
+    # turn on stats unix socket
+    stats socket /var/lib/haproxy/stats
+
+#---------------------------------------------------------------------
+# common defaults that all the &#39;listen&#39; and &#39;backend&#39; sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+    mode                    http
+    log                     global
+    option                  httplog
+    option                  dontlognull
+    option http-server-close
+    option forwardfor       except 127.0.0.0/8
+    option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 3000
+
+#---------------------------------------------------------------------
+# kubernetes apiserver frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend kubernetes-apiserver
+    mode                 tcp
+    bind                 *:16443
+    option               tcplog
+    default_backend      kubernetes-apiserver
+
+#---------------------------------------------------------------------
+# round robin balancing between the various backends
+#---------------------------------------------------------------------
+backend kubernetes-apiserver
+    mode        tcp
+    balance     roundrobin
+    option      tcplog
+    option      tcp-check
+    server      $&#123;master01Name&#125; $&#123;master01IP&#125;:6443 check
+    server      $&#123;master02Name&#125; $&#123;master02IP&#125;:6443 check
+    server      $&#123;master03Name&#125; $&#123;master03IP&#125;:6443 check
+
+#---------------------------------------------------------------------
+# collection haproxy statistics message
+#---------------------------------------------------------------------
+listen stats
+    bind                 :8000
+    stats auth           admin:devops
+    maxconn              50
+    stats refresh        10s
+    stats realm          HAProxy\ Statistics
+    stats uri            /healthy
+EOF</code></pre>
+</li>
+<li><p>Service</p>
+<pre><code class="bash">$ sudo bash -c &#39;cat &gt; /lib/systemd/system/haproxy.service&#39; &lt;&lt; EOF
+[Unit]
+Description=HAProxy Load Balancer
+After=network.target syslog.service
+Wants=syslog.service
+
+[Service]
+Environment=&quot;CONFIG=/etc/haproxy/haproxy.cfg&quot; &quot;PIDFILE=/run/haproxy.pid&quot;
+EnvironmentFile=-/etc/default/haproxy
+ExecStartPre=/usr/sbin/haproxy -f $CONFIG -c -q
+ExecStart=/usr/sbin/haproxy -W -f $CONFIG -p $PIDFILE $EXTRAOPTS
+ExecReload=/usr/sbin/haproxy -f $CONFIG -c -q $EXTRAOPTS $RELOADOPTS
+ExecReload=/bin/kill -USR2 $MAINPID
+KillMode=mixed
+Restart=always
+Type=forking
+
+[Install]
+WantedBy=multi-user.target
+EOF</code></pre>
+<h3 id="Start-Service"><a href="#Start-Service" class="headerlink" title="Start Service"></a>Start Service</h3><pre><code class="bash">$ sudo systemctl enabled haproxy.service
+$ sudo systemctl start haproxy.service</code></pre>
+</li>
+</ul>
+<h3 id="verify"><a href="#verify" class="headerlink" title="verify"></a>verify</h3><pre><code class="bash">$ sudo systemctl is-enabled haproxy.service
+enabled
+$ sudo systemctl is-active haproxy.service
+active</code></pre>
+<img src="/assets/images/haproxy-1.png" style="width: 999px;" />
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">Author: </span><span class="p-copytight-value"><a href="mailto:marslo.jiao@gmail.com">marslo</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">Article reference: </span><span class="p-copytight-value"><a href="/2020/09/10/1-15-3-HA-kubernetes-Cluster-Playbook-load-balance/">https://imarslo.github.io/2020/09/10/1-15-3-HA-kubernetes-Cluster-Playbook-load-balance/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">Copyright Notice: </span><span class="p-copytight-value">This website is licensed under<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0&#160;</a>. Please mark the derivation if you want to copy it:<a href="https://imarslo.github.io"> marslo » I, Marslo</a></span></div></blockquote></div></article><div class="p-info box"><span class="p-tags"><i class="fa fa-tags"></i><a href="/tags/kuberentes/">kuberentes</a><a href="/tags/centos/">centos</a></span></div><aside id="toc"><div class="toc-title">table of content</div><nav><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Objective"><span class="toc-number">1.</span> <span class="toc-text">Objective</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#variables"><span class="toc-number">1.1.</span> <span class="toc-text">variables</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#keepalived"><span class="toc-number">2.</span> <span class="toc-text">keepalived</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#configuration"><span class="toc-number">2.1.</span> <span class="toc-text">configuration</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#enable-keepalived-services-in-all-masters"><span class="toc-number">2.2.</span> <span class="toc-text">enable keepalived services in all masters</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#haproxy"><span class="toc-number">3.</span> <span class="toc-text">haproxy</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#configuration-1"><span class="toc-number">3.1.</span> <span class="toc-text">configuration</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Start-Service"><span class="toc-number">3.2.</span> <span class="toc-text">Start Service</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#verify"><span class="toc-number">3.3.</span> <span class="toc-text">verify</span></a></li></ol></li></ol></nav></aside></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2020/09/15/1-15-3-HA-kubernetes-Cluster-Playbook-leading-master/">&lt; 1.15.3 HA kubernetes Cluster Playbook (leading master)</a><a class="next" href="/2020/08/30/1-15-3-HA-kubernetes-Cluster-Playbook-etcd-cluster/">1.15.3 HA kubernetes Cluster Playbook (etcd cluster) &gt;</a></div><div id="valine-comment"><style type="text/css">.night .v[data-class=v] a { color: #0F9FB4 !important; }
+.night .v[data-class=v] a:hover { color: #216C73 !important; }
+.night .v[data-class=v] li { list-style: inherit; }
+.night .v[data-class=v] .vwrap { border: 1px solid #223441; border-radius: 0; }
+.night .v[data-class=v] .vwrap:hover { box-shadow: 0 0 6px 1px #223441; }
+.night .v[data-class=v] .vbtn { border-radius: 0; background: none; }
+.night .v[data-class=v] .vlist .vcard .vh { border-bottom-color: #293D4E; }
+.night .v[data-class=v] .vwrap .vheader .vinput { border-bottom-color: #223441; }
+.night .v[data-class=v] .vwrap .vheader .vinput:focus { border-bottom-color: #339EB4; }
+.night .v[data-class=v] code, .night .v[data-class=v] pre,.night .v[data-class=v] .vlist .vcard .vhead .vsys { background: #203240 !important; }
+.night .v[data-class=v] code, .night .v[data-class=v] pre { color: #F0F0F0; font-size: 95%; }
+.v[data-class=v] .vcards .vcard .vh {border-bottom-color: #223441; }
+.night .v[data-class=v] .vcards .vcard .vcontent.expand:before {background: linear-gradient(180deg,rgba(38,57,73,.4),rgba(38,57,73,.9));}
+.night .v[data-class=v] .vcards .vcard .vcontent.expand:after {background: rgba(38,57,73,.9)}
+</style><div id="vcomment"></div><script src="//unpkg.com/valine@latest/dist/Valine.min.js"></script><script>var notify = 'false' == true ? true : false;
+var verify = 'false' == true ? true : false;
+var GUEST_INFO = ['nick','mail','link'];
+var guest_info = 'nick,mail,link'.split(',').filter(function(item){
+  return GUEST_INFO.indexOf(item) > -1
+});
+guest_info = guest_info.length == 0 ? GUEST_INFO :guest_info;
+window.valine = new Valine({
+  el:'#vcomment',
+  notify:notify,
+  verify:verify,
+  appId:'XLQJz4Rmc6CKKKnyYw3ktxlJ-gzGzoHsz',
+  appKey:'dG2jf5T5GELGnnoqJdP2q2Ax',
+  lang: 'en',
+  placeholder:'ヾﾉ≧∀≦)o say something...',
+  avatar:'identicon',
+  guest_info:guest_info,
+  pageSize:'10'
+})</script></div></section><footer><p>Copyright © 2020 - 2020 <a href="/." rel="nofollow">marslo</a> |<strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0</a></strong><br><span id="busuanzi_container_site_uv"><i class="fa fa-user"></i><span id="busuanzi_value_site_uv"></span></span><span id="busuanzi_container_site_pv"><i class="fa fa-eye"></i><span id="busuanzi_value_site_pv"></span></span> | Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a> Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/plugins/prettify/prettify.js"></script><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script type="text/javascript" src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" async></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+    search_path = 'search.xml';
+}
+var path = '/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script type="text/javascript" src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script></body></html>
