@@ -1,0 +1,74 @@
+# config
+description: "心之所向，无惧无悔,<br>愿求仁得仁，复无怨怼！"
+
+# comment system
+valine: ## https://valine.js.org
+  enable: true ## If you want to use Valine comment system, please set the value to true.
+  appid:  ## Your LeanCloud application App ID, e.g. pRBBL2JR4N7kLEGojrF0MsSs-gzGzoHsz
+  appkey: ## Your LeanCloud application App Key, e.g. tjczHpDfhjYDSYddzymYK1JJ
+  lang: zh-cn ## Language, e.g. zh-cn, en
+  notify: false ## Mail notifier, see https://github.com/xCss/Valine/wiki/Valine-评论系统中的邮件提醒设置
+  verify: false ## Validation code.
+  placeholder: "ヾﾉ≧∀≦)o Come on, say something..." ## Comment box placeholders.
+  avatar: 'identicon' ## Gravatar type, see https://github.com/xCss/Valine/wiki/avatar-setting-for-valine
+  pageSize: 10 ## Number of comments per page.
+  guest_info: nick,mail,link ## Attributes of reviewers.
+
+# baidu 
+baidu: ## https://tongji.baidu.com, https://ziyuan.baidu.com
+  analytics: false
+  analytics_id: ## Your baidu tongji related id, e.g. 213250b3059d3a7c6607d30bea630c32
+  verification: ## Your baidu ziyuan verification code
+
+busuanzi: true  ## If you want show counter of views, please set the value to true
+local_search: true
+customize_css: false  ## if enable customize_css, it will load file source/css/customize.scss
+fancybox: true  ## for image view
+copyright: true ## for CC BY-NC 4.0 license
+highlight: ## only choose one of below items
+    google_code_prettify: false
+    highlight: true ## highlight.js
+    highlight_theme: 'atom-one-dark' ## refer: https://highlightjs.org/static/demo/
+        
+
+theme_color: '#2d4356'
+
+menu:
+  - page: 归档
+    directory: archives/
+  - page: 分类
+    directory: categories/
+  - page: 标签
+    directory: tags/
+  - page: 关于
+    directory: about/
+  - page: rss
+    directory: atom.xml
+
+icons:
+  date: fa fa-calendar
+  category: fa fa-folder
+  tag: fa fa-tag
+  tags: fa fa-tags
+  view: fa fa-eye
+  visitor: fa fa-user
+
+widgets: ## Six widgets in sidebar provided: search, category, tag, recent_posts, rencent_comments and links.
+  #- search
+  #- category
+  #- tag
+  #- recent_posts
+  #- recent_comments
+  #- links
+
+links:
+  - title: friend-1
+    url: https://www.friend-1.com
+
+# Static files
+js: js
+css: css
+plugins: plugins
+
+# Theme version
+version: 0.0.1

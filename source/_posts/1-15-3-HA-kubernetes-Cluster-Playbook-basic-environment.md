@@ -7,25 +7,23 @@ tags: ["kuberentes", "centos"]
 excerpt_separator: <!--more-->
 ---
 
-## Objective
+## objective
 
 <img src="{{site.url}}/assets/images/external-etcd-topology.png" style="width: 666px;" />
 
 <!--more-->
 
-> [!NOTE]
-> notice
-
+> [!NOTE|label:notice]
 > reference:
 > - [Kubernetes HA cluster with external etcd](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/#external-etcd-topology)
 > - [Generate self-signed certificates](https://coreos.com/os/docs/latest/generate-self-signed-certificates.html)
 
 
-### Server Matrix
+### server matrix
 
-#### Environment List
+#### environment list
 
-| Hostname   | IP Address      | etcd              | cfssl & cfssljson | keepalived | haproxy  |
+| HOSTNAME   | IP ADDRESS      | ETCD              | CFSSL & CFSSLJSON | KEEPALIVED | HAPROXY  |
 |------------|-----------------|-------------------|-------------------|------------|----------|
 | master01   | 192.168.100.200 | master01 (etcd-0) | &#x2714;          | &#x2714;   | &#x2714; |
 | master02   | 192.168.100.201 | master02 (etcd-1) | &#x2714;          | &#x2714;   | &#x2714; |
@@ -37,7 +35,7 @@ excerpt_separator: <!--more-->
 
 #### `/etc/hosts`
 
-Add for all servers
+> Add for all servers
 
 ```bash
 192.168.100.200     master01
@@ -53,7 +51,6 @@ Add for all servers
 ```
 
 #### variables
-
 <div class="alert alert-success" role="alert">
 <i class="fa fa-check-square-o"></i>
 <b>Tip: </b>execute the variables in all console (masters) at the very begining, make sure all servers are using the exact same value (and avoid manual input)
@@ -92,8 +89,9 @@ ipAddr=$(ip a s "${interface}" | sed -rn 's|\W*inet[^6]\W*([0-9\.]{7,15}).*$|\1|
 peerName=$(hostname)
 ```
 
-## Tools Setup
+## tools setup
 ### cfssl & cfssljson
+
 <div class="alert alert-success" role="alert">
 <i class="fa fa-check-square-o"></i>
 <b>Tip: </b> cfssl and cfssljson need to be setup in all masters!
@@ -106,6 +104,7 @@ $ sudo chmod +x /usr/local/bin/cfssl*
 ```
 
 ### etcd
+
 <div class="alert alert-success" role="alert">
 <i class="fa fa-check-square-o"></i>
 <b>Tip: </b> etcd need to be setup in all masters!
@@ -113,7 +112,7 @@ $ sudo chmod +x /usr/local/bin/cfssl*
 
 ```bash
 $ curl -sSL ${etcdDownloadUrl}/${etcdVer}/etcd-${etcdVer}-linux-amd64.tar.gz \
-    | sudo tar -xzv --strip-components=1 -C /usr/local/bin/
+       | sudo tar -xzv --strip-components=1 -C /usr/local/bin/
 ```
 
 <details>
@@ -124,7 +123,7 @@ $ curl -sSL ${etcdDownloadUrl}/${etcdVer}/etcd-${etcdVer}-linux-amd64.tar.gz \
   ssh devops@master0${i} 'etcd --version'
 done
 
-Result:
+# result
 etcd Version: 3.3.15
 Git SHA: 94745a4ee
 Go Version: go1.12.9
@@ -135,62 +134,76 @@ Go OS/Arch: linux/amd64
 
 ### keepalived
 
-- Installation
-    ```bash
-    $ mkdir -p ~/temp
-    $ sudo mkdir -p /etc/keepalived/
+- installation
+  ```bash
+  $ mkdir -p ~/temp
+  $ sudo mkdir -p /etc/keepalived/
 
-    $ curl -fsSL ${keepaliveDownloadUrl}/keepalived-${keepaliveVer}.tar.gz \
-       | tar xzf - -C ~/temp
+  $ curl -fsSL ${keepaliveDownloadUrl}/keepalived-${keepaliveVer}.tar.gz \
+     | tar xzf - -C ~/temp
 
-    $ pushd .
-    $ cd ~/temp/keepalived-${keepaliveVer}
-    $ ./configure && make
-    $ sudo make install
-    $ sudo cp keepalived/keepalived.service /etc/systemd/system/
-    $ popd
-    $ rm -rf ~/temp
-    ```
-### Haproxy 2.0.6
-- Install haproxy from source code
-    ```bash
-   $ curl -fsSL http://www.haproxy.org/download/$(echo ${haproxyVer%\.*})/src/haproxy-${haproxyVer}.tar.gz \
-           | tar xzf - -C ~
+  $ pushd .
+  $ cd ~/temp/keepalived-${keepaliveVer}
+  $ ./configure && make
+  $ sudo make install
+  $ sudo cp keepalived/keepalived.service /etc/systemd/system/
+  $ popd
+  $ rm -rf ~/temp
+  ```
 
-    $ pushd .
-    $ cd ~/haproxy-${haproxyVer}
-    $ make TARGET=linux-glibc \
-           USE_LINUX_TPROXY=1 \
-           USE_ZLIB=1 \
-           USE_REGPARM=1 \
-           USE_PCRE=1 \
-           USE_PCRE_JIT=1 \
-           USE_OPENSSL=1 \
-           SSL_INC=/usr/include \
-           SSL_LIB=/usr/lib \
-           ADDLIB=-ldl \
-           USE_SYSTEMD=1
-    $ sudo make install
-    $ sudo cp haproxy /usr/sbin/
-    $ sudo cp examples/haproxy.init /etc/init.d/haproxy && sudo chmod +x $_
-    $ popd
-    $ rm -rf ~/haproxy-${haproxyVer}
-    ```
-- Result
+### haproxy 2.0.6
+- install haproxy from source code
+  ```bash
+  $ curl -fsSL http://www.haproxy.org/download/$(echo ${haproxyVer%\.*})/src/haproxy-${haproxyVer}.tar.gz \
+         | tar xzf - -C ~
+
+  $ pushd .
+  $ cd ~/haproxy-${haproxyVer}
+  $ make TARGET=linux-glibc \
+         USE_LINUX_TPROXY=1 \
+         USE_ZLIB=1 \
+         USE_REGPARM=1 \
+         USE_PCRE=1 \
+         USE_PCRE_JIT=1 \
+         USE_OPENSSL=1 \
+         SSL_INC=/usr/include \
+         SSL_LIB=/usr/lib \
+         ADDLIB=-ldl \
+         USE_SYSTEMD=1
+  $ sudo make install
+  $ sudo cp haproxy /usr/sbin/
+  $ sudo cp examples/haproxy.init /etc/init.d/haproxy && sudo chmod +x $_
+  $ popd
+  $ rm -rf ~/haproxy-${haproxyVer}
+  ```
+
+- result
 <img src="{{site.url}}/assets/images/haproxy-1.png" style="width: 999px;" />
 
 ### helm
-- Installation
-    ```bash
-    $ curl -fsSL \
-        https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz \
-        | sudo tar -xzv --strip-components=1 -C /usr/local/bin/
 
-    $ while read -r _i; do
-        sudo chmod +x "/usr/local/bin/${_i}"
-    done < <(echo helm tiller)
-    ```
-- Configration
+- helm-3
+  ```bash
+  $ bash <(curl -k -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3)
+  Error: could not find tiller
+  Helm v3.12.3 is available. Changing from version .
+  Downloading https://get.helm.sh/helm-v3.12.3-linux-amd64.tar.gz
+  Verifying checksum... Done.
+  Preparing to install helm into /usr/local/bin
+  helm installed into /usr/local/bin/helm
+  ```
+
+- helm-2
+  ```bash
+  $ curl -fsSL https://get.helm.sh/helm-v2.14.3-linux-amd64.tar.gz \
+         | sudo tar -xzv --strip-components=1 -C /usr/local/bin/
+
+  $ while read -r _i; do
+    sudo chmod +x "/usr/local/bin/${_i}"
+  done < <(echo helm tiller)
+  ```
+
+  - configration
     ```bash
     $ helm init
     $ helm init --client-only
@@ -203,52 +216,52 @@ Go OS/Arch: linux/amd64
     ```
 
 ### docker
-- Presetup
-    ```bash
-    # clean environment
-    $ sudo yum remove -y docker                  \
-                         docker-client           \
-                         docker-client-latest    \
-                         docker-common           \
-                         docker-latest           \
-                         docker-latest-logrotate \
-                         docker-logrotate        \
-                         docker-selinux          \
-                         docker-engine-selinux   \
-                         docker-engine
+- presetup
+  ```bash
+  # clean environment
+  $ sudo yum remove -y docker                  \
+                       docker-client           \
+                       docker-client-latest    \
+                       docker-common           \
+                       docker-latest           \
+                       docker-latest-logrotate \
+                       docker-logrotate        \
+                       docker-selinux          \
+                       docker-engine-selinux   \
+                       docker-engine
 
-    # nice to have
-    $ sudo yum -y groupinstall 'Development Tools'
+  # nice to have
+  $ sudo yum -y groupinstall 'Development Tools'
 
-    $ sudo yum install -y yum-utils                   \
+  $ sudo yum install -y yum-utils                     \
                         device-mapper-persistent-data \
                         lvm2                          \
                         bash-completion*
 
-    $ sudo yum-config-manager \
-         --add-repo           \
+  $ sudo yum-config-manager \
+         --add-repo         \
          https://download.docker.com/linux/centos/docker-ce.repo
-    $ sudo yum-config-manager --disable docker-ce-edge
-    $ sudo yum-config-manager --disable docker-ce-test
-    $ sudo yum makecache
-    ```
+  $ sudo yum-config-manager --disable docker-ce-edge
+  $ sudo yum-config-manager --disable docker-ce-test
+  $ sudo yum makecache
+  ```
 
-- Installaiton
-    ```bash
-    $ dockerVer=$(sudo yum list docker-ce --showduplicates \
-                    | sort -r \
-                    | grep 18\.09 \
-                    | awk -F' ' '{print $2}' \
-                    | awk -F':' '{print $NF}' \
-                 )
-    $ sudo yum install -y                      \
-             docker-ce-${dockerVer}.x86_64     \
-             docker-ce-cli-${dockerVer}.x86_64 \
-             containerd.io
-    ```
-- Configuraiton
-    ```bash
-    $ sudo systemctl enable --now docker
-    $ sudo systemctl status docker
-    $ sudo chown -a -G docker $(whomai)
-    ```
+- installaiton
+  ```bash
+  $ dockerVer=$(sudo yum list docker-ce --showduplicates \
+                  | sort -r \
+                  | grep 18\.09 \
+                  | awk -F' ' '{print $2}' \
+                  | awk -F':' '{print $NF}' \
+               )
+  $ sudo yum install -y                      \
+           docker-ce-${dockerVer}.x86_64     \
+           docker-ce-cli-${dockerVer}.x86_64 \
+           containerd.io
+  ```
+- configuraiton
+  ```bash
+  $ sudo systemctl enable --now docker
+  $ sudo systemctl status docker
+  $ sudo chown -a -G docker $(whomai)
+  ```
